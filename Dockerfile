@@ -1,74 +1,40 @@
-FROM ubuntu:latest
+from            ubuntu:12.04
 MAINTAINER Anton Belov <a.belov@kmplzt.de>
 
 
-# Add libraries directory
-ADD ./lib /home/lib
+env             DEBIAN_FRONTEND noninteractive
+env             APTGET apt-get install -y --no-install-recommends
 
-# Keep upstart from complaining
-RUN dpkg-divert --local --rename --add /sbin/initctl
-RUN ln -sf /bin/true /sbin/initctl
+# Workaround for upstart init, from https://github.com/dotcloud/docker/issues/1024
+run             dpkg-divert --local --rename --add /sbin/initctl
+run             ln -sf /bin/true /sbin/initctl
 
-# Let the conatiner know that there is no tty
-ENV DEBIAN_FRONTEND noninteractive
+# Workaround for successful dist-upgrade, from https://github.com/dotcloud/docker/issues/1724
+run             dpkg-divert --local --rename /usr/bin/ischroot
+run             ln -sf /bin/true /usr/bin/ischroot
 
-RUN apt-get update
-RUN apt-get -y upgrade
+RUN echo "deb http://archive.ubuntu.com/ubuntu precise universe main multiverse restricted" > /etc/apt/sources.list
+RUN echo "deb http://security.ubuntu.com/ubuntu/ precise-security universe main multiverse restricted" >> /etc/apt/sources.list
+RUN echo "deb http://ppa.launchpad.net/fkrull/deadsnakes/ubuntu precise main" >> /etc/apt/sources.list
+RUN echo "deb http://ppa.launchpad.net/atareao/atareao/ubuntu precise main" >> /etc/apt/sources.list
+
+# Pre-update
+run             apt-get update -y --fix-missing
+run             ${APTGET} apt-transport-https
+run             ${APTGET} software-properties-common python-software-properties ca-certificates
+
+
+# Basic
+run             ${APTGET} aptitude autoconf automake build-essential cron dialog openssl pkg-config psmisc
+#run             ${APTGET} g++ gcc make
+#run             ${APTGET} libreadline6-dev libssl-dev libxml2-dev libxslt-dev libxslt1-dev zlib1g-dev
+run             ${APTGET} curl emacs git less
 
 # Basic Requirements
-RUN apt-get -y install nginx  php-apc pwgen python-setuptools curl git ssmtp pv mysql-client vim tree
+RUN ${APTGET} nginx php5-fpm php5-mysql python-setuptools php-apc pwgen curl git ssmtp pv mysql-client
  
-##########################
-## INSTALL DEPENDENCIES ##
-##########################
-
-# Install packages
-RUN DEBIAN_FRONTEND=noninteractive \
- && apt-get install -y \
-	autoconf \
-	build-essential \
-	imagemagick \
-	libgd3 \
-	libgd-dev \
-	libfreetype6-dev \
-	mcrypt \
-	libmcrypt-dev \
-	libbz2-dev \
-	libcurl4-openssl-dev \
-	libevent-dev \
-	libffi-dev \
-	libglib2.0-dev \
-	libjpeg-dev \
-	libmagickcore-dev \
-	libmagickwand-dev \
-	libmysqlclient-dev \
-	libncurses-dev \
-	libpq-dev \
-	libreadline-dev \
-	libsqlite3-dev \
-	libssl-dev \
-	libxml2-dev \
-	libxslt-dev \
-	libyaml-dev \
-	zlib1g-dev
-
-# Build and install PHP
-WORKDIR /home/lib/php-5.3
-RUN tar -xvf php-5.3.29.tar.gz
-WORKDIR /home/lib/php-5.3/php-5.3.29
-RUN ./configure --enable-fpm --with-mysql --with-mysqli --with-zlib --with-jpeg-dir --with-gd --with-freetype-dir --with-curl --with-openssl --with-pdo-mysql --with-mcrypt
-RUN make clean
-RUN make
-RUN make install
-RUN cp sapi/fpm/php-fpm /usr/local/bin
-
-###############
-## CONFIGURE ##
-###############
-
-# PHP config files
-ADD ./conf/php/php.ini /usr/local/php/php.ini
-ADD ./conf/php/php-fpm.conf /usr/local/etc/php-fpm.conf
+# Magento Requirements
+RUN ${APTGET} php5-curl php5-gd php5-intl php-pear php5-imagick php5-imap php5-mcrypt php5-memcache php5-ming php5-ps php5-pspell php5-recode php5-sqlite php5-tidy php5-xmlrpc php5-xsl php5-xdebug 
 
 # Install Composer
 RUN curl -sS https://getcomposer.org/installer | php
@@ -92,7 +58,6 @@ RUN chmod 755 /scripts/*.sh
 # nginx config
 RUN cp /config/nginx/nginx.conf /etc/nginx/nginx.conf
 RUN cp /config/nginx/nginx-host.conf /etc/nginx/sites-available/default
-RUN cp /config/nginx/apc.ini /etc/php5/mods-available/apcu.ini
 
 # php-fpm config
 RUN cp /config/nginx/php.ini /etc/php5/fpm/php.ini
@@ -101,7 +66,7 @@ RUN cp /config/nginx/www.conf /etc/php5/fpm/pool.d/www.conf
 
 # mcrypt enable
 RUN ln -s /etc/php5/mods-available/mcrypt.ini /etc/php5/fpm/conf.d/20-mcrypt.ini
-RUN ln -s /etc/php5/mods-available/mcrypt.ini /etc/php5/cli/conf.d/20-mcrypt.ini
+
 
 # Enabling SSH
 RUN rm -f /etc/service/sshd/down
@@ -124,6 +89,3 @@ EXPOSE 80
 
 ENTRYPOINT ["/scripts/entrypoint.sh"]
 CMD ["/bin/bash", "/scripts/start.sh"]
-
-
-
