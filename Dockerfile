@@ -20,7 +20,7 @@ run          apt-get update -y --fix-missing && \
              ${APTGET} aptitude autoconf automake build-essential cron dialog openssl pkg-config psmisc && \
              ${APTGET} curl emacs git less && \
              ${APTGET} nginx php5-fpm php5-mysql python-setuptools php-apc pwgen curl git ssmtp pv mysql-client && \
-			 ${APTGET} php5-curl php5-gd php5-intl php-pear php5-imagick php5-imap php5-mcrypt php5-memcache php5-ming php5-ps php5-pspell php5-recode php5-sqlite php5-tidy php5-xmlrpc php5-xsl php5-xdebug && \
+			 ${APTGET} php5-curl php5-gd php5-intl php-pear php5-imagick php5-imap php5-mcrypt php5-memcache php5-ming php5-ps php5-pspell php5-recode php5-sqlite php5-tidy php5-xmlrpc php5-xsl php5-xdebug gdb php5-dbg && \
 			 apt-get clean && \
 			 rm -rf /tmp/* /var/lib/apt/lists/* /var/tmp/* /download/directory
 
@@ -39,7 +39,7 @@ ADD /config /config
 RUN chmod 755 /scripts/*.sh
 
 # nginx config
-RUN cp /config/nginx/nginx.conf /etc/nginx/nginx.conf && cp /config/nginx/nginx-host.conf /etc/nginx/sites-available/default
+RUN cp /config/nginx/nginx.conf /etc/nginx/nginx.conf && cp /config/nginx/nginx-host.conf /etc/nginx/sites-available/default && cp /config/xdebug.ini /etc/php5/conf.d/xdebug.ini
 
 # php-fpm config
 RUN cp /config/nginx/php.ini /etc/php5/fpm/php.ini && cp /config/nginx/php-fpm.conf /etc/php5/fpm/php-fpm.conf && cp /config/nginx/www.conf /etc/php5/fpm/pool.d/www.conf
